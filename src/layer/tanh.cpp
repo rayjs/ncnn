@@ -13,11 +13,10 @@
 // specific language governing permissions and limitations under the License.
 
 #include "tanh.h"
+
 #include <math.h>
 
 namespace ncnn {
-
-DEFINE_LAYER_CREATOR(TanH)
 
 TanH::TanH()
 {
@@ -25,47 +24,21 @@ TanH::TanH()
     support_inplace = true;
 }
 
-int TanH::forward(const Mat& bottom_blob, Mat& top_blob) const
-{
-    int w = bottom_blob.w;
-    int h = bottom_blob.h;
-    int channels = bottom_blob.c;
-    int size = w * h;
-
-    top_blob.create(w, h, channels);
-    if (top_blob.empty())
-        return -100;
-
-    #pragma omp parallel for
-    for (int q=0; q<channels; q++)
-    {
-        const float* ptr = bottom_blob.channel(q);
-        float* outptr = top_blob.channel(q);
-
-        for (int i=0; i<size; i++)
-        {
-            outptr[i] = tanh(ptr[i]);
-        }
-    }
-
-    return 0;
-}
-
-int TanH::forward_inplace(Mat& bottom_top_blob) const
+int TanH::forward_inplace(Mat& bottom_top_blob, const Option& opt) const
 {
     int w = bottom_top_blob.w;
     int h = bottom_top_blob.h;
     int channels = bottom_top_blob.c;
     int size = w * h;
 
-    #pragma omp parallel for
-    for (int q=0; q<channels; q++)
+    #pragma omp parallel for num_threads(opt.num_threads)
+    for (int q = 0; q < channels; q++)
     {
         float* ptr = bottom_top_blob.channel(q);
 
-        for (int i=0; i<size; i++)
+        for (int i = 0; i < size; i++)
         {
-            ptr[i] = tanh(ptr[i]);
+            ptr[i] = static_cast<float>(tanh(ptr[i]));
         }
     }
 

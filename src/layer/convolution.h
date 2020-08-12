@@ -23,34 +23,56 @@ class Convolution : public Layer
 {
 public:
     Convolution();
-    virtual ~Convolution();
 
-#if NCNN_STDIO
-#if NCNN_STRING
-    virtual int load_param(FILE* paramfp);
-#endif // NCNN_STRING
-    virtual int load_param_bin(FILE* paramfp);
-    virtual int load_model(FILE* binfp);
-#endif // NCNN_STDIO
-    virtual int load_param(const unsigned char*& mem);
-    virtual int load_model(const unsigned char*& mem);
+    virtual int load_param(const ParamDict& pd);
 
-    virtual int forward(const Mat& bottom_blob, Mat& top_blob) const;
+    virtual int load_model(const ModelBin& mb);
+
+    virtual int create_pipeline(const Option& opt);
+
+    virtual int forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
+
+protected:
+    void make_padding(const Mat& bottom_blob, Mat& bottom_blob_bordered, const Option& opt) const;
+
+    int forward_int8(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
 
 public:
     // param
     int num_output;
-    int kernel_size;
-    int dilation;
-    int stride;
-    int pad;
+    int kernel_w;
+    int kernel_h;
+    int dilation_w;
+    int dilation_h;
+    int stride_w;
+    int stride_h;
+    int pad_left; // -233=SAME_UPPER -234=SAME_LOWER
+    int pad_right;
+    int pad_top;
+    int pad_bottom;
+    float pad_value;
     int bias_term;
 
     int weight_data_size;
 
+    int int8_scale_term;
+
+    // 0=none 1=relu 2=leakyrelu 3=clip 4=sigmoid
+    int activation_type;
+    Mat activation_params;
+
     // model
     Mat weight_data;
     Mat bias_data;
+
+    Mat weight_data_int8_scales;
+    float bottom_blob_int8_scale;
+    float top_blob_int8_scale; // TODO load param
+
+    bool use_int8_requantize;
+
+    // implementation type, 0 means do not use auto pack model
+    int impl_type;
 };
 
 } // namespace ncnn

@@ -19,12 +19,19 @@
 
 namespace ncnn {
 
-class ReLU_arm : public ReLU
+class ReLU_arm : virtual public ReLU
 {
 public:
-    virtual int forward(const Mat& bottom_blob, Mat& top_blob) const;
+    ReLU_arm();
 
-    virtual int forward_inplace(Mat& bottom_top_blob) const;
+    virtual int forward_inplace(Mat& bottom_top_blob, const Option& opt) const;
+
+protected:
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    int forward_inplace_fp16s(Mat& bottom_top_blob, const Option& opt) const;
+#endif
+    int forward_inplace_bf16s(Mat& bottom_top_blob, const Option& opt) const;
+    int forward_inplace_int8_neon(Mat& bottom_top_blob, const Option& opt) const;
 };
 
 } // namespace ncnn

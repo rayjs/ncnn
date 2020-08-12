@@ -19,10 +19,31 @@
 
 namespace ncnn {
 
-class InnerProduct_arm : public InnerProduct
+class InnerProduct_arm : virtual public InnerProduct
 {
 public:
-    virtual int forward(const Mat& bottom_blob, Mat& top_blob) const;
+    InnerProduct_arm();
+
+    virtual int create_pipeline(const Option& opt);
+    virtual int destroy_pipeline(const Option& opt);
+
+    virtual int forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
+
+protected:
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    int forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
+    int forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
+#endif
+    int forward_bf16s(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
+
+public:
+    ncnn::Layer* flatten;
+
+    // fp16
+    Mat weight_data_fp16;
+
+    // bf16
+    Mat weight_data_bf16;
 };
 
 } // namespace ncnn

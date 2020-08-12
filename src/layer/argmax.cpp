@@ -13,60 +13,33 @@
 // specific language governing permissions and limitations under the License.
 
 #include "argmax.h"
+
 #include <algorithm>
 #include <functional>
 
 namespace ncnn {
 
-DEFINE_LAYER_CREATOR(ArgMax)
-
 ArgMax::ArgMax()
 {
+    one_blob_only = true;
 }
 
-#if NCNN_STDIO
-#if NCNN_STRING
-int ArgMax::load_param(FILE* paramfp)
+int ArgMax::load_param(const ParamDict& pd)
 {
-    int nscan = fscanf(paramfp, "%d %d", &out_max_val, &topk);
-    if (nscan != 2)
-    {
-        fprintf(stderr, "ArgMax load_param failed %d\n", nscan);
-        return -1;
-    }
-
-    return 0;
-}
-#endif // NCNN_STRING
-int ArgMax::load_param_bin(FILE* paramfp)
-{
-    fread(&out_max_val, sizeof(int), 1, paramfp);
-
-    fread(&topk, sizeof(int), 1, paramfp);
-
-    return 0;
-}
-#endif // NCNN_STDIO
-
-int ArgMax::load_param(const unsigned char*& mem)
-{
-    out_max_val = *(int*)(mem);
-    mem += 4;
-
-    topk = *(int*)(mem);
-    mem += 4;
+    out_max_val = pd.get(0, 0);
+    topk = pd.get(1, 1);
 
     return 0;
 }
 
-int ArgMax::forward(const Mat& bottom_blob, Mat& top_blob) const
+int ArgMax::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
     int size = bottom_blob.total();
 
     if (out_max_val)
-        top_blob.create(topk, 2);
+        top_blob.create(topk, 2, 4u, opt.blob_allocator);
     else
-        top_blob.create(topk, 1);
+        top_blob.create(topk, 1, 4u, opt.blob_allocator);
     if (top_blob.empty())
         return -100;
 
@@ -74,21 +47,21 @@ int ArgMax::forward(const Mat& bottom_blob, Mat& top_blob) const
 
     // partial sort topk with index
     // optional value
-    std::vector< std::pair<float, int> > vec;
+    std::vector<std::pair<float, int> > vec;
     vec.resize(size);
-    for (int i=0; i<size; i++)
+    for (int i = 0; i < size; i++)
     {
         vec[i] = std::make_pair(ptr[i], i);
     }
 
     std::partial_sort(vec.begin(), vec.begin() + topk, vec.end(),
-                        std::greater< std::pair<float, int> >());
+                      std::greater<std::pair<float, int> >());
 
     float* outptr = top_blob;
     if (out_max_val)
     {
         float* valptr = outptr + topk;
-        for (int i=0; i<topk; i++)
+        for (int i = 0; i < topk; i++)
         {
             outptr[i] = vec[i].first;
             valptr[i] = vec[i].second;
@@ -96,7 +69,7 @@ int ArgMax::forward(const Mat& bottom_blob, Mat& top_blob) const
     }
     else
     {
-        for (int i=0; i<topk; i++)
+        for (int i = 0; i < topk; i++)
         {
             outptr[i] = vec[i].second;
         }
